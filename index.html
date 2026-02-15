@@ -10,7 +10,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -23,6 +23,83 @@
             background: #FAFAFA;
             color: #1a1a1a;
             -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            font-feature-settings: 'kern' 1, 'liga' 1;
+        }
+
+        /* Modern Typography Hierarchy */
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Inter', sans-serif;
+            font-weight: 700;
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+        }
+
+        h1 {
+            font-size: 72px;
+            line-height: 84px;
+            font-weight: 700;
+            letter-spacing: -0.04em;
+        }
+
+        h2 {
+            font-size: 48px;
+            line-height: 56px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        h3 {
+            font-size: 24px;
+            line-height: 32px;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+        }
+
+        h4 {
+            font-size: 16px;
+            line-height: 24px;
+            font-weight: 500;
+            letter-spacing: 0;
+        }
+
+        .text-display {
+            font-size: 96px;
+            line-height: 1;
+            font-weight: 800;
+            letter-spacing: -0.05em;
+        }
+
+        .text-large {
+            font-size: 18px;
+            line-height: 28px;
+            font-weight: 400;
+        }
+
+        .text-small {
+            font-size: 14px;
+            line-height: 20px;
+            font-weight: 400;
+        }
+
+        .text-tiny {
+            font-size: 12px;
+            line-height: 16px;
+            font-weight: 500;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        /* Responsive Typography */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 48px;
+                line-height: 56px;
+            }
+            h2 {
+                font-size: 36px;
+                line-height: 44px;
+            }
         }
         
         @keyframes fadeInUp {
@@ -209,8 +286,13 @@
                     <header className="fixed top-0 left-0 right-0 bg-white backdrop-blur-md z-50 border-b border-minimal shadow-sm">
                         <div className="max-w-7xl mx-auto px-6 lg:px-8">
                             <div className="flex justify-between items-center h-20">
-                                <button onClick={() => setCurrentView('home')} className="text-2xl font-bold tracking-tight">
-                                    CRUNCH
+                                <button onClick={() => setCurrentView('home')} className="flex items-center gap-3 hover:opacity-80 transition">
+                                    <img 
+                                        src="logo.png" 
+                                        alt="CRUNCH Logo" 
+                                        className="h-10 w-10 object-contain"
+                                    />
+                                    <span className="text-2xl font-bold tracking-tight">CRUNCH</span>
                                 </button>
                                 <nav className="hidden md:flex items-center space-x-8">
                                     <button onClick={() => setCurrentView('home')} className="text-sm hover:text-gray-600 transition">Browse</button>
@@ -262,10 +344,10 @@
                                         <div className="grid md:grid-cols-2 gap-16 items-center">
                                             {/* Left: Text */}
                                             <div>
-                                                <h1 className="text-6xl md:text-7xl font-bold mb-6 fade-in-up leading-tight">
+                                                <h1 className="text-6xl md:text-7xl font-bold mb-6 leading-tight" style={{letterSpacing: '-0.04em'}}>
                                                     Uber For Side Hustles
                                                 </h1>
-                                                <p className="text-xl text-gray-600 mb-12 leading-relaxed">
+                                                <p className="text-xl text-gray-600 mb-12 leading-relaxed" style={{lineHeight: '1.75'}}>
                                                     Connect with skilled local professionals for every service you need
                                                 </p>
                                                 <div className="max-w-2xl">
@@ -301,20 +383,20 @@
                                     <div className="max-w-7xl mx-auto">
                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
                                             <div className="text-center">
-                                                <div className="text-5xl font-bold mb-2">500+</div>
-                                                <div className="text-sm uppercase tracking-wide text-gray-600">Professionals</div>
+                                                <div className="text-5xl font-bold mb-2" style={{letterSpacing: '-0.02em'}}>500+</div>
+                                                <div className="text-xs uppercase tracking-wider text-gray-600 font-medium">Professionals</div>
                                             </div>
                                             <div className="text-center">
-                                                <div className="text-5xl font-bold mb-2">10</div>
-                                                <div className="text-sm uppercase tracking-wide text-gray-600">Cities</div>
+                                                <div className="text-5xl font-bold mb-2" style={{letterSpacing: '-0.02em'}}>10</div>
+                                                <div className="text-xs uppercase tracking-wider text-gray-600 font-medium">Cities</div>
                                             </div>
                                             <div className="text-center">
-                                                <div className="text-5xl font-bold mb-2">1,000+</div>
-                                                <div className="text-sm uppercase tracking-wide text-gray-600">Jobs Completed</div>
+                                                <div className="text-5xl font-bold mb-2" style={{letterSpacing: '-0.02em'}}>1,000+</div>
+                                                <div className="text-xs uppercase tracking-wider text-gray-600 font-medium">Jobs Completed</div>
                                             </div>
                                             <div className="text-center">
-                                                <div className="text-5xl font-bold mb-2">4.9★</div>
-                                                <div className="text-sm uppercase tracking-wide text-gray-600">Average Rating</div>
+                                                <div className="text-5xl font-bold mb-2" style={{letterSpacing: '-0.02em'}}>4.9★</div>
+                                                <div className="text-xs uppercase tracking-wider text-gray-600 font-medium">Average Rating</div>
                                             </div>
                                         </div>
                                     </div>
@@ -325,8 +407,8 @@
                                     <section className="py-20 px-6 bg-white">
                                         <div className="max-w-7xl mx-auto">
                                             <div className="text-center mb-12">
-                                                <h2 className="text-4xl font-bold mb-4">Featured Professionals</h2>
-                                                <p className="text-gray-600">Hand-picked top-rated service providers</p>
+                                                <h2 className="text-4xl font-bold mb-4" style={{letterSpacing: '-0.02em'}}>Featured Professionals</h2>
+                                                <p className="text-gray-600 text-lg" style={{lineHeight: '1.75'}}>Hand-picked top-rated service providers</p>
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                                 {providers.filter(p => p.featured).slice(0, 3).map((provider) => (
@@ -964,7 +1046,7 @@
                     {/* Testimonials */}
                     <section className="py-20 px-6 bg-white">
                         <div className="max-w-7xl mx-auto">
-                            <h2 className="text-4xl font-bold text-center mb-16">What Our Customers Say</h2>
+                            <h2 className="text-4xl font-bold text-center mb-16" style={{letterSpacing: '-0.02em'}}>What Our Customers Say</h2>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                 <div className="bg-gray-50 p-8 rounded-2xl">
                                     <div className="flex gap-1 mb-4">
