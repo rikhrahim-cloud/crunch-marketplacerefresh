@@ -8,6 +8,7 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -207,6 +208,11 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
+        // Initialize Supabase
+        const SUPABASE_URL = 'https://thgfclfgelfrcftycdna.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRoZ2ZjbGZnZWxmcmNmdHljZG5hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5MDg3NTAsImV4cCI6MjA4NjQ4NDc1MH0.gOR4LFZPZ_xLxb0PpYOGr8DeAJwSURVNiWN-IFbD_9Q';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
         // Cities in Cameroon
         const cities = ['All Cities', 'Yaoundé', 'Douala', 'Bamenda', 'Bafoussam', 'Garoua', 'Maroua', 'Ngaoundéré', 'Bertoua', 'Buea', 'Limbe'];
 
@@ -240,9 +246,11 @@
         ];
 
         function CrunchApp() {
+            // UI State
             const [currentView, setCurrentView] = useState('home');
-            const [userType, setUserType] = useState(null); // 'user', 'provider', 'admin'
+            const [userType, setUserType] = useState(null);
             const [isLoggedIn, setIsLoggedIn] = useState(false);
+            const [currentUser, setCurrentUser] = useState(null);
             const [providers, setProviders] = useState([]);
             const [searchTerm, setSearchTerm] = useState('');
             const [selectedCategory, setSelectedCategory] = useState('All');
@@ -254,6 +262,15 @@
             const [showBookingModal, setShowBookingModal] = useState(false);
             const [showPaymentModal, setShowPaymentModal] = useState(false);
             const [loginType, setLoginType] = useState('user');
+            const [loading, setLoading] = useState(true);
+            
+            // Login/Register Form State
+            const [loginEmail, setLoginEmail] = useState('');
+            const [loginPassword, setLoginPassword] = useState('');
+            const [registerEmail, setRegisterEmail] = useState('');
+            const [registerPassword, setRegisterPassword] = useState('');
+            const [registerName, setRegisterName] = useState('');
+            const [registerPhone, setRegisterPhone] = useState('');
             
             const [bookingData, setBookingData] = useState({
                 date: '',
@@ -275,6 +292,72 @@
                 image: null
             });
 
+            // Load providers from database on mount
+            useEffect(() => {
+                checkUser();
+                loadProviders();
+            }, []);
+
+            // Check if user is logged in
+            const checkUser = async () => {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', user.id)
+                        .single();
+                    
+                    if (profile) {
+                        setCurrentUser(profile);
+                        setIsLoggedIn(true);
+                        setUserType(profile.user_type);
+                    }
+                }
+                setLoading(false);
+            };
+
+            // Load all providers from database
+            const loadProviders = async () => {
+                const { data, error } = await supabase
+                    .from('providers')
+                    .select(`
+                        *,
+                        profiles (
+                            full_name,
+                            email,
+                            phone,
+                            avatar_url
+                        )
+                    `)
+                    .eq('available', true)
+                    .order('rating', { ascending: false });
+                
+                if (data) {
+                    // Transform data to match frontend format
+                    const formattedProviders = data.map(p => ({
+                        id: p.id,
+                        name: p.profiles?.full_name || 'Unknown',
+                        email: p.profiles?.email || '',
+                        phone: p.profiles?.phone || '',
+                        service: p.service,
+                        category: p.category,
+                        city: p.city,
+                        hourlyRate: p.hourly_rate,
+                        description: p.description,
+                        rating: p.rating || 0,
+                        reviewCount: p.review_count || 0,
+                        verified: p.verified,
+                        featured: p.featured,
+                        available: p.available,
+                        responseTime: p.response_time,
+                        completedJobs: p.total_jobs,
+                        image: p.images?.[0] || 'https://via.placeholder.com/400x400?text=' + encodeURIComponent(p.service)
+                    }));
+                    setProviders(formattedProviders);
+                }
+            };
+
             const filteredProviders = providers.filter(provider => {
                 const matchesSearch = 
                     provider.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -285,53 +368,234 @@
                 return matchesSearch && matchesCategory && matchesCity;
             });
 
-            const handleLogin = (type) => {
-                setIsLoggedIn(true);
-                setUserType(type);
-                setShowLoginModal(false);
-                if (type === 'admin') {
-                    setCurrentView('admin');
+            const handleLogin = async () => {
+                if (!loginEmail || !loginPassword) {
+                    alert('Please enter email and password');
+                    return;
+                }
+
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: loginEmail,
+                    password: loginPassword
+                });
+
+                if (error) {
+                    alert('Login failed: ' + error.message);
+                    return;
+                }
+
+                // Get user profile
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', data.user.id)
+                    .single();
+
+                if (profile) {
+                    setCurrentUser(profile);
+                    setIsLoggedIn(true);
+                    setUserType(profile.user_type);
+                    setShowLoginModal(false);
+                    setLoginEmail('');
+                    setLoginPassword('');
+                    
+                    if (profile.user_type === 'admin') {
+                        setCurrentView('admin');
+                    }
+                    alert('Welcome back, ' + profile.full_name + '!');
+                } else {
+                    alert('Profile not found. Please contact support.');
                 }
             };
 
-            const handleCreateProfile = () => {
-                const newProvider = {
-                    ...profileData,
-                    id: Date.now(),
-                    rating: 0,
-                    reviewCount: 0,
-                    verified: false,
-                    responseTime: '< 2hr',
-                    completedJobs: 0,
-                    image: profileData.image || 'https://via.placeholder.com/400x400?text=No+Image'
-                };
-                setProviders([...providers, newProvider]);
+            // Register new user
+            const handleRegister = async () => {
+                if (!registerEmail || !registerPassword || !registerName) {
+                    alert('Please fill in all fields');
+                    return;
+                }
+
+                // Sign up with Supabase Auth
+                const { data, error } = await supabase.auth.signUp({
+                    email: registerEmail,
+                    password: registerPassword
+                });
+
+                if (error) {
+                    alert('Registration failed: ' + error.message);
+                    return;
+                }
+
+                if (data.user) {
+                    // Create profile
+                    const { error: profileError } = await supabase
+                        .from('profiles')
+                        .insert([{
+                            id: data.user.id,
+                            email: registerEmail,
+                            full_name: registerName,
+                            phone: registerPhone,
+                            user_type: loginType
+                        }]);
+
+                    if (profileError) {
+                        alert('Profile creation failed: ' + profileError.message);
+                        return;
+                    }
+
+                    alert('Account created! Please check your email to verify your account.');
+                    setShowRegisterModal(false);
+                    setRegisterEmail('');
+                    setRegisterPassword('');
+                    setRegisterName('');
+                    setRegisterPhone('');
+                }
+            };
+
+            // Logout
+            const handleLogout = async () => {
+                await supabase.auth.signOut();
+                setIsLoggedIn(false);
+                setUserType(null);
+                setCurrentUser(null);
+                setCurrentView('home');
+                alert('Logged out successfully');
+            };
+
+            const handleCreateProfile = async () => {
+                if (!currentUser) {
+                    alert('Please log in first');
+                    return;
+                }
+
+                if (!profileData.name || !profileData.service || !profileData.hourlyRate) {
+                    alert('Please fill in all required fields');
+                    return;
+                }
+
+                // Insert provider profile
+                const { error } = await supabase
+                    .from('providers')
+                    .insert([{
+                        id: currentUser.id,
+                        service: profileData.service,
+                        category: profileData.category,
+                        city: profileData.city,
+                        hourly_rate: parseInt(profileData.hourlyRate),
+                        description: profileData.description,
+                        experience_years: 0,
+                        verified: false,
+                        featured: false,
+                        available: true
+                    }]);
+
+                if (error) {
+                    alert('Profile creation failed: ' + error.message);
+                    return;
+                }
+
+                // Reload providers
+                await loadProviders();
                 setShowProfileModal(false);
                 setCurrentView('home');
+                alert('Provider profile created successfully!');
             };
 
             const handleBooking = () => {
+                if (!currentUser) {
+                    alert('Please log in to book a service');
+                    setShowBookingModal(false);
+                    setShowLoginModal(true);
+                    return;
+                }
                 setShowBookingModal(false);
                 setShowPaymentModal(true);
             };
 
-            const handlePayment = () => {
-                setShowPaymentModal(false);
-                alert('Booking confirmed! Payment instructions sent to your phone.');
-                setCurrentView('home');
-                setBookingData({ date: '', time: '', hours: 2, address: '', notes: '', paymentMethod: 'mtn' });
-            };
-
-            const deleteProvider = (id) => {
-                if (window.confirm('Delete this provider?')) {
-                    setProviders(providers.filter(p => p.id !== id));
+            const handlePayment = async () => {
+                if (!currentUser || !selectedProvider) {
+                    alert('Error: Missing user or provider information');
+                    return;
                 }
+
+                if (!bookingData.date || !bookingData.time || !bookingData.address) {
+                    alert('Please fill in all booking details');
+                    return;
+                }
+
+                // Create booking in database
+                const totalAmount = selectedProvider.hourlyRate * bookingData.hours;
+                
+                const { data, error } = await supabase
+                    .from('bookings')
+                    .insert([{
+                        customer_id: currentUser.id,
+                        provider_id: selectedProvider.id,
+                        service: selectedProvider.service,
+                        booking_date: bookingData.date,
+                        booking_time: bookingData.time,
+                        hours: bookingData.hours,
+                        address: bookingData.address,
+                        notes: bookingData.notes,
+                        total_amount: totalAmount,
+                        payment_method: bookingData.paymentMethod,
+                        status: 'pending'
+                    }])
+                    .select();
+
+                if (error) {
+                    alert('Booking failed: ' + error.message);
+                    return;
+                }
+
+                setShowPaymentModal(false);
+                alert('Booking created successfully! The provider will contact you soon.');
+                setCurrentView('home');
+                
+                // Reset booking data
+                setBookingData({
+                    date: '',
+                    time: '',
+                    hours: 2,
+                    address: '',
+                    notes: '',
+                    paymentMethod: 'mtn'
+                });
             };
 
-            const toggleFeatured = (id) => {
-                setProviders(providers.map(p => 
-                    p.id === id ? {...p, featured: !p.featured} : p
-                ));
+            const deleteProvider = async (id) => {
+                if (!window.confirm('Delete this provider?')) return;
+
+                const { error } = await supabase
+                    .from('providers')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) {
+                    alert('Delete failed: ' + error.message);
+                    return;
+                }
+
+                await loadProviders();
+                alert('Provider deleted successfully');
+            };
+
+            const toggleFeatured = async (id) => {
+                // Get current status
+                const provider = providers.find(p => p.id === id);
+                if (!provider) return;
+
+                const { error } = await supabase
+                    .from('providers')
+                    .update({ featured: !provider.featured })
+                    .eq('id', id);
+
+                if (error) {
+                    alert('Update failed: ' + error.message);
+                    return;
+                }
+
+                await loadProviders();
             };
 
             return (
@@ -380,7 +644,7 @@
                                             {userType === 'admin' && (
                                                 <button onClick={() => setCurrentView('admin')} className="text-sm bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">Admin Panel</button>
                                             )}
-                                            <button onClick={() => { setIsLoggedIn(false); setUserType(null); setCurrentView('home'); }} className="text-sm text-red-600 hover:text-red-700 transition">Logout</button>
+                                            <button onClick={handleLogout} className="text-sm text-red-600 hover:text-red-700 transition">Logout</button>
                                         </>
                                     )}
                                 </div>
@@ -817,33 +1081,36 @@
                     {showLoginModal && (
                         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-6">
                             <div className="bg-white rounded-lg p-8 max-w-md w-full">
-                                <h2 className="text-2xl font-bold mb-6">Sign In</h2>
+                                <h2 className="text-2xl font-bold mb-6">Sign In to CRUNCH</h2>
                                 <div className="space-y-4 mb-6">
-                                    <button
-                                        onClick={() => setLoginType('user')}
-                                        className={`w-full p-4 border rounded-lg text-left ${loginType === 'user' ? 'border-black bg-gray-50' : 'border-gray-200'}`}
-                                    >
-                                        <div className="font-medium">User Account</div>
-                                        <div className="text-sm text-gray-500">Book services</div>
-                                    </button>
-                                    <button
-                                        onClick={() => setLoginType('provider')}
-                                        className={`w-full p-4 border rounded-lg text-left ${loginType === 'provider' ? 'border-black bg-gray-50' : 'border-gray-200'}`}
-                                    >
-                                        <div className="font-medium">Provider Account</div>
-                                        <div className="text-sm text-gray-500">Offer services</div>
-                                    </button>
-                                    <button
-                                        onClick={() => setLoginType('admin')}
-                                        className={`w-full p-4 border rounded-lg text-left ${loginType === 'admin' ? 'border-black bg-gray-50' : 'border-gray-200'}`}
-                                    >
-                                        <div className="font-medium">Admin Account</div>
-                                        <div className="text-sm text-gray-500">Manage platform</div>
-                                    </button>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">Email</label>
+                                        <input
+                                            type="email"
+                                            placeholder="your@email.com"
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg"
+                                            value={loginEmail}
+                                            onChange={(e) => setLoginEmail(e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">Password</label>
+                                        <input
+                                            type="password"
+                                            placeholder="••••••••"
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg"
+                                            value={loginPassword}
+                                            onChange={(e) => setLoginPassword(e.target.value)}
+                                        />
+                                    </div>
                                 </div>
                                 <div className="flex gap-3">
                                     <button onClick={() => setShowLoginModal(false)} className="flex-1 py-3 border border-gray-200 rounded-md hover:bg-gray-50">Cancel</button>
-                                    <button onClick={() => handleLogin(loginType)} className="flex-1 py-3 bg-black text-white rounded-md hover:bg-gray-800">Sign In</button>
+                                    <button onClick={handleLogin} className="flex-1 py-3 bg-black text-white rounded-md hover:bg-gray-800">Sign In</button>
+                                </div>
+                                <div className="mt-4 text-center text-sm">
+                                    <span className="text-gray-600">Don't have an account? </span>
+                                    <button onClick={() => { setShowLoginModal(false); setShowRegisterModal(true); }} className="text-black font-medium hover:underline">Sign Up</button>
                                 </div>
                             </div>
                         </div>
@@ -853,24 +1120,74 @@
                     {showRegisterModal && (
                         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-6">
                             <div className="bg-white rounded-lg p-8 max-w-md w-full">
-                                <h2 className="text-2xl font-bold mb-6">Join CRUNCH</h2>
+                                <h2 className="text-2xl font-bold mb-6">Create Account</h2>
                                 <div className="space-y-4 mb-6">
-                                    <button
-                                        onClick={() => { setShowRegisterModal(false); setShowLoginModal(true); setLoginType('user'); }}
-                                        className="w-full p-4 border border-gray-200 rounded-lg text-left hover:border-black"
-                                    >
-                                        <div className="font-medium">Join as User</div>
-                                        <div className="text-sm text-gray-500">Find and book services</div>
-                                    </button>
-                                    <button
-                                        onClick={() => { setShowRegisterModal(false); setShowLoginModal(true); setLoginType('provider'); }}
-                                        className="w-full p-4 border border-gray-200 rounded-lg text-left hover:border-black"
-                                    >
-                                        <div className="font-medium">Join as Provider</div>
-                                        <div className="text-sm text-gray-500">Offer your services and earn</div>
-                                    </button>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">Account Type</label>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <button
+                                                onClick={() => setLoginType('customer')}
+                                                className={`p-3 border rounded-lg text-sm ${loginType === 'customer' ? 'border-black bg-gray-50' : 'border-gray-200'}`}
+                                            >
+                                                Customer
+                                            </button>
+                                            <button
+                                                onClick={() => setLoginType('provider')}
+                                                className={`p-3 border rounded-lg text-sm ${loginType === 'provider' ? 'border-black bg-gray-50' : 'border-gray-200'}`}
+                                            >
+                                                Provider
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">Full Name</label>
+                                        <input
+                                            type="text"
+                                            placeholder="John Doe"
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg"
+                                            value={registerName}
+                                            onChange={(e) => setRegisterName(e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">Email</label>
+                                        <input
+                                            type="email"
+                                            placeholder="your@email.com"
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg"
+                                            value={registerEmail}
+                                            onChange={(e) => setRegisterEmail(e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">Phone (Optional)</label>
+                                        <input
+                                            type="tel"
+                                            placeholder="+237 XXX XXX XXX"
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg"
+                                            value={registerPhone}
+                                            onChange={(e) => setRegisterPhone(e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">Password</label>
+                                        <input
+                                            type="password"
+                                            placeholder="At least 6 characters"
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg"
+                                            value={registerPassword}
+                                            onChange={(e) => setRegisterPassword(e.target.value)}
+                                        />
+                                    </div>
                                 </div>
-                                <button onClick={() => setShowRegisterModal(false)} className="w-full py-3 border border-gray-200 rounded-md hover:bg-gray-50">Cancel</button>
+                                <div className="flex gap-3">
+                                    <button onClick={() => setShowRegisterModal(false)} className="flex-1 py-3 border border-gray-200 rounded-md hover:bg-gray-50">Cancel</button>
+                                    <button onClick={handleRegister} className="flex-1 py-3 bg-black text-white rounded-md hover:bg-gray-800">Create Account</button>
+                                </div>
+                                <div className="mt-4 text-center text-sm">
+                                    <span className="text-gray-600">Already have an account? </span>
+                                    <button onClick={() => { setShowRegisterModal(false); setShowLoginModal(true); }} className="text-black font-medium hover:underline">Sign In</button>
+                                </div>
                             </div>
                         </div>
                     )}
