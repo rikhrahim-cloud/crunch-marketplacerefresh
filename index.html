@@ -548,8 +548,91 @@
                     return;
                 }
 
+                // Send email notification to provider
+                if (data && data[0]) {
+                    try {
+                        const emailResponse = await fetch('https://api.resend.com/emails', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': 'Bearer re_dZzsN5gZ_BAxFoKvyTpmDciG3WuezghRB',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                from: 'CRUNCH <noreply@resend.dev>',
+                                to: selectedProvider.email || 'rikrhahim@gmail.com',
+                                subject: '🔔 New Booking Request - CRUNCH',
+                                html: `
+                                    <!DOCTYPE html>
+                                    <html>
+                                    <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+                                    <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#f5f5f5">
+                                        <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:40px 20px">
+                                            <tr><td align="center">
+                                                <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1)">
+                                                    <tr><td style="background:#000;padding:30px;text-align:center">
+                                                        <h1 style="margin:0;color:#fff;font-size:32px;font-weight:700">CRUNCH</h1>
+                                                        <p style="margin:10px 0 0;color:#fff;opacity:0.8;font-size:14px">New Booking Request</p>
+                                                    </td></tr>
+                                                    <tr><td style="padding:40px 30px">
+                                                        <h2 style="margin:0 0 20px;font-size:24px;font-weight:700;color:#000">You Have a New Booking! 🎉</h2>
+                                                        <p style="margin:0 0 30px;font-size:16px;line-height:1.6;color:#333">A customer has requested your services. Here are the details:</p>
+                                                        <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border-radius:8px;margin:0 0 20px">
+                                                            <tr><td style="padding:24px">
+                                                                <h3 style="margin:0 0 16px;font-size:16px;font-weight:600;color:#000;text-transform:uppercase">Service Details</h3>
+                                                                <table width="100%" cellpadding="8" cellspacing="0">
+                                                                    <tr><td style="font-size:14px;color:#666;font-weight:500">Service:</td><td style="font-size:14px;color:#000;font-weight:600;text-align:right">${selectedProvider.service}</td></tr>
+                                                                    <tr><td style="font-size:14px;color:#666;font-weight:500">Date:</td><td style="font-size:14px;color:#000;font-weight:600;text-align:right">${new Date(bookingData.date).toLocaleDateString('en-US', {weekday:'long',year:'numeric',month:'long',day:'numeric'})}</td></tr>
+                                                                    <tr><td style="font-size:14px;color:#666;font-weight:500">Time:</td><td style="font-size:14px;color:#000;font-weight:600;text-align:right">${bookingData.time}</td></tr>
+                                                                    <tr><td style="font-size:14px;color:#666;font-weight:500">Duration:</td><td style="font-size:14px;color:#000;font-weight:600;text-align:right">${bookingData.hours} hour(s)</td></tr>
+                                                                    <tr><td style="font-size:14px;color:#666;font-weight:500">Location:</td><td style="font-size:14px;color:#000;font-weight:600;text-align:right">${bookingData.address}</td></tr>
+                                                                    <tr><td style="font-size:14px;color:#666;font-weight:500;padding-top:12px;border-top:1px solid #e5e7eb">Amount:</td><td style="font-size:18px;color:#000;font-weight:700;text-align:right;padding-top:12px;border-top:1px solid #e5e7eb">${totalAmount.toLocaleString()} CFA</td></tr>
+                                                                </table>
+                                                                ${bookingData.notes ? `<div style="margin-top:16px;padding:12px;background:#fff;border-left:3px solid #000;border-radius:4px"><p style="margin:0;font-size:13px;color:#666;font-weight:500">NOTES:</p><p style="margin:4px 0 0;font-size:14px;color:#000">${bookingData.notes}</p></div>` : ''}
+                                                            </td></tr>
+                                                        </table>
+                                                        <table width="100%" cellpadding="0" cellspacing="0" style="background:#e8f4ff;border-radius:8px;margin:0 0 30px">
+                                                            <tr><td style="padding:24px">
+                                                                <h3 style="margin:0 0 16px;font-size:16px;font-weight:600;color:#000;text-transform:uppercase">Customer Information</h3>
+                                                                <table width="100%" cellpadding="8" cellspacing="0">
+                                                                    <tr><td style="font-size:14px;color:#666;font-weight:500">Name:</td><td style="font-size:14px;color:#000;font-weight:600;text-align:right">${currentUser.full_name}</td></tr>
+                                                                    <tr><td style="font-size:14px;color:#666;font-weight:500">Phone:</td><td style="font-size:14px;color:#000;font-weight:600;text-align:right"><a href="tel:${currentUser.phone || ''}" style="color:#0066cc;text-decoration:none">${currentUser.phone || 'Not provided'}</a></td></tr>
+                                                                    <tr><td style="font-size:14px;color:#666;font-weight:500">Email:</td><td style="font-size:14px;color:#000;font-weight:600;text-align:right"><a href="mailto:${currentUser.email}" style="color:#0066cc;text-decoration:none">${currentUser.email}</a></td></tr>
+                                                                </table>
+                                                            </td></tr>
+                                                        </table>
+                                                        <table width="100%" cellpadding="0" cellspacing="0">
+                                                            <tr><td align="center" style="padding:20px 0">
+                                                                <a href="https://crunch-marketplacerefresh.vercel.app" style="display:inline-block;padding:16px 40px;background:#000;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:16px">View on CRUNCH</a>
+                                                            </td></tr>
+                                                        </table>
+                                                        <p style="margin:30px 0 0;font-size:14px;line-height:1.6;color:#666">Please login to your CRUNCH account to accept or decline this booking request.</p>
+                                                    </td></tr>
+                                                    <tr><td style="padding:30px;background:#f9fafb;border-top:1px solid #e5e7eb">
+                                                        <p style="margin:0 0 8px;font-size:12px;color:#999;text-align:center">This is an automated email from CRUNCH. Please do not reply.</p>
+                                                        <p style="margin:0;font-size:12px;color:#999;text-align:center">Need help? <a href="mailto:rikrhahim@gmail.com" style="color:#0066cc;text-decoration:none">rikrhahim@gmail.com</a> or <a href="tel:+237670791352" style="color:#0066cc;text-decoration:none">+237 670 791 352</a></p>
+                                                    </td></tr>
+                                                </table>
+                                            </td></tr>
+                                        </table>
+                                    </body>
+                                    </html>
+                                `
+                            })
+                        });
+                        
+                        if (emailResponse.ok) {
+                            console.log('✅ Email sent successfully to provider!');
+                        } else {
+                            console.error('❌ Email send failed:', await emailResponse.text());
+                        }
+                    } catch (emailError) {
+                        console.error('❌ Email error:', emailError);
+                        // Don't fail the booking if email fails
+                    }
+                }
+
                 setShowPaymentModal(false);
-                alert('Booking created successfully! The provider will contact you soon.');
+                alert('Booking created successfully! The provider will be notified via email.');
                 setCurrentView('home');
                 
                 // Reset booking data
