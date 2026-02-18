@@ -433,7 +433,7 @@
                 }
 
                 if (data.user) {
-                    // Create profile with dual role flags
+                    // Create profile - EVERYONE is both customer AND provider by default!
                     const { error: profileError } = await supabase
                         .from('profiles')
                         .insert([{
@@ -441,9 +441,9 @@
                             email: registerEmail,
                             full_name: registerName,
                             phone: registerPhone,
-                            user_type: loginType,
-                            is_customer: loginType === 'user' || loginType === 'customer',
-                            is_provider: loginType === 'provider'
+                            user_type: 'customer', // Default display type
+                            is_customer: true, // Everyone can book
+                            is_provider: true  // Everyone can provide
                         }]);
 
                     if (profileError) {
@@ -663,21 +663,6 @@
                                     <button onClick={() => setCurrentView('home')} className="text-sm hover:text-gray-600 transition">Browse</button>
                                     <button onClick={() => setCurrentView('about')} className="text-sm hover:text-gray-600 transition">About</button>
                                     <button onClick={() => setCurrentView('contact')} className="text-sm hover:text-gray-600 transition">Contact</button>
-                                    <button 
-                                        onClick={() => { 
-                                            if (isLoggedIn && isProvider) {
-                                                setShowProfileModal(true);
-                                            } else if (!isLoggedIn) {
-                                                setShowLoginModal(true);
-                                                setLoginType('provider');
-                                            } else {
-                                                alert('You need provider access. Contact support to become a provider!');
-                                            }
-                                        }} 
-                                        className="bg-black text-white px-6 py-2.5 text-sm hover:bg-gray-800 transition rounded-md font-medium"
-                                    >
-                                        For Professionals
-                                    </button>
                                 </nav>
                                 <div className="flex items-center gap-4">
                                     {!isLoggedIn ? (
@@ -1467,28 +1452,11 @@
                                 <h2 className="text-2xl font-bold mb-6">Create Account</h2>
                                 <div className="space-y-4 mb-6">
                                     <div>
-                                        <label className="block text-sm font-medium mb-2">Account Type</label>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <button
-                                                onClick={() => setLoginType('customer')}
-                                                className={`p-3 border rounded-lg text-sm ${loginType === 'customer' ? 'border-black bg-gray-50' : 'border-gray-200'}`}
-                                            >
-                                                Customer
-                                            </button>
-                                            <button
-                                                onClick={() => setLoginType('provider')}
-                                                className={`p-3 border rounded-lg text-sm ${loginType === 'provider' ? 'border-black bg-gray-50' : 'border-gray-200'}`}
-                                            >
-                                                Provider
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div>
                                         <label className="block text-sm font-medium mb-2">Full Name</label>
                                         <input
                                             type="text"
                                             placeholder="John Doe"
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg"
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-black"
                                             value={registerName}
                                             onChange={(e) => setRegisterName(e.target.value)}
                                         />
@@ -1498,7 +1466,7 @@
                                         <input
                                             type="email"
                                             placeholder="your@email.com"
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg"
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-black"
                                             value={registerEmail}
                                             onChange={(e) => setRegisterEmail(e.target.value)}
                                         />
@@ -1508,7 +1476,7 @@
                                         <input
                                             type="tel"
                                             placeholder="+237 XXX XXX XXX"
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg"
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-black"
                                             value={registerPhone}
                                             onChange={(e) => setRegisterPhone(e.target.value)}
                                         />
@@ -1518,10 +1486,13 @@
                                         <input
                                             type="password"
                                             placeholder="At least 6 characters"
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg"
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-black"
                                             value={registerPassword}
                                             onChange={(e) => setRegisterPassword(e.target.value)}
                                         />
+                                    </div>
+                                    <div className="bg-gray-50 p-4 rounded-lg">
+                                        <p className="text-xs text-gray-600">You'll be able to both book services and offer your own services with this account.</p>
                                     </div>
                                 </div>
                                 <div className="flex gap-3">
@@ -1859,6 +1830,22 @@
                             </div>
                         </div>
                     </footer>
+
+                    {/* Floating Add Service Button - Always visible when logged in */}
+                    {isLoggedIn && (
+                        <button
+                            onClick={() => setShowProfileModal(true)}
+                            className="fixed bottom-8 right-8 w-16 h-16 bg-black hover:bg-gray-800 text-white rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 z-40 group"
+                            title="Add Your Service"
+                        >
+                            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            <span className="absolute right-20 bg-black text-white text-sm px-4 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                Add Service
+                            </span>
+                        </button>
+                    )}
                 </div>
             );
         }
