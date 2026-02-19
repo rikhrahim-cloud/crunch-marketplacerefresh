@@ -3,7 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRUNCH - Yango For Side Hustles</title>
+    <title>CRUNCH - The Network For Side Hustles</title>
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#FF6B9D">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CRUNCH">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/logo.png">
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -758,7 +765,7 @@ const loadProviders = async () => {
                                             {/* Left: Text */}
                                             <div>
                                                 <h1 className="text-6xl md:text-7xl font-bold mb-6 leading-tight" style={{letterSpacing: '-0.05em'}}>
-                                                    Yango For <span className="crunch-gradient">Side Hustles</span>
+                                                    The Network For <span className="crunch-gradient">Side Hustles</span>
                                                 </h1>
                                                 <p className="text-xl text-gray-600 mb-12" style={{lineHeight: '1.6', letterSpacing: '-0.01em', fontWeight: '400'}}>
                                                     Connect with skilled local professionals for every service you need
@@ -1882,7 +1889,7 @@ const loadProviders = async () => {
                                         </div>
                                         <div className="text-xl font-semibold">CRUNCH</div>
                                     </div>
-                                    <p className="text-sm text-gray-600 mb-4">Yango For Side Hustles</p>
+                                    <p className="text-sm text-gray-600 mb-4">The Network For Side Hustles</p>
                                     <div className="flex gap-4">
                                         <a href="https://twitter.com/crunch" target="_blank" className="text-gray-600 hover:text-black">Twitter</a>
                                         <a href="https://instagram.com/crunch" target="_blank" className="text-gray-600 hover:text-black">Instagram</a>
@@ -1930,6 +1937,17 @@ const loadProviders = async () => {
         }
 
         ReactDOM.render(<CrunchApp />, document.getElementById('root'));
+    </script>
+    
+    <!-- PWA Service Worker -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('✅ PWA Ready'))
+                    .catch(err => console.log('PWA setup pending'));
+            });
+        }
     </script>
 </body>
 </html>
