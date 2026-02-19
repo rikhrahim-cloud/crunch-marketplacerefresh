@@ -263,6 +263,7 @@
             const [userType, setUserType] = useState(null);
             const [isCustomer, setIsCustomer] = useState(false);
             const [isProvider, setIsProvider] = useState(false);
+            const [language, setLanguage] = useState('en');
             const [isLoggedIn, setIsLoggedIn] = useState(false);
             const [currentUser, setCurrentUser] = useState(null);
             const [providers, setProviders] = useState([]);
@@ -675,6 +676,12 @@
                                     <button onClick={() => setCurrentView('home')} className="text-sm hover:text-gray-600 transition">Browse</button>
                                     <button onClick={() => setCurrentView('about')} className="text-sm hover:text-gray-600 transition">About</button>
                                     <button onClick={() => setCurrentView('contact')} className="text-sm hover:text-gray-600 transition">Contact</button>
+<button 
+    onClick={() => setLanguage(language === 'en' ? 'fr' : 'en')}
+    className="text-xs font-semibold px-3 py-1.5 border border-gray-200 rounded-md hover:bg-gray-50 transition ml-4"
+>
+    {language === 'en' ? '🇫🇷 FR' : '🇬🇧 EN'}
+</button>
                                 </nav>
                                 <div className="flex items-center gap-4">
                                     {!isLoggedIn ? (
@@ -767,13 +774,36 @@
                                         </div>
                                     </div>
                                 </section>
-
+{/* Statistics Section */}
+<section className="py-16 px-6 bg-gray-50">
+    <div className="max-w-7xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div className="text-center">
+                <div className="text-4xl font-bold mb-2 crunch-gradient">500+</div>
+                <div className="text-sm text-gray-600">Active Professionals</div>
+            </div>
+            <div className="text-center">
+                <div className="text-4xl font-bold mb-2 crunch-gradient">10</div>
+                <div className="text-sm text-gray-600">Cities Served</div>
+            </div>
+            <div className="text-center">
+                <div className="text-4xl font-bold mb-2 crunch-gradient">1,000+</div>
+                <div className="text-sm text-gray-600">Jobs Completed</div>
+            </div>
+            <div className="text-center">
+                <div className="text-4xl font-bold mb-2 crunch-gradient">4.9★</div>
+                <div className="text-sm text-gray-600">Average Rating</div>
+            </div>
+        </div>
+    </div>
+</section>
                                 {/* Featured Providers */}
                                 {providers.filter(p => p.featured).length > 0 && (
                                     <section className="py-20 px-6 bg-white">
                                         <div className="max-w-7xl mx-auto">
                                             <div className="text-center mb-12">
-                                                <h2 className="text-4xl font-bold mb-4" style={{letterSpacing: '-0.03em'}}>Featured Professionals</h2>
+                                                
+<h2 className="text-4xl font-bold mb-4" style={{letterSpacing: '-0.03em'}}>Featured Professionals</h2>
                                                 <p className="text-gray-600 text-lg" style={{lineHeight: '1.6', fontWeight: '400'}}>Hand-picked top-rated service providers</p>
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
