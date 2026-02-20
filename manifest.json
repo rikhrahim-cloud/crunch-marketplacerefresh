@@ -1,0 +1,23 @@
+{
+  "name": "CRUNCH - The Network For Side Hustles",
+  "short_name": "CRUNCH",
+  "description": "Find trusted service providers in Cameroon. Book verified professionals for home services, repairs, and more.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#FF6B9D",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "lang": "en-US",
+  "dir": "ltr",
+  "scope": "/",
+  "prefer_related_applications": false
+}
