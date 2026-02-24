@@ -271,6 +271,18 @@
             const [isCustomer, setIsCustomer] = useState(false);
             const [isProvider, setIsProvider] = useState(false);
             const [language, setLanguage] = useState('en');
+const [reviews, setReviews] = useState([]);
+const [showReviewModal, setShowReviewModal] = useState(false);
+const [reviewData, setReviewData] = useState({
+    rating: 5,
+    comment: '',
+    booking_id: null,
+    provider_id: null
+});
+const [adminStats, setAdminStats] = useState(null);
+const [adminUsers, setAdminUsers] = useState([]);
+const [adminBookings, setAdminBookings] = useState([]);
+const [adminView, setAdminView] = useState('stats');
 const [stats, setStats] = useState({
     providers: 0,
     cities: 0,
@@ -384,6 +396,114 @@ const loadStats = async () => {
         console.error('Error loading stats:', error);
     }
 };            
+// Load reviews for a provider
+const loadReviews = async (providerId) => {
+    try {
+        const { data, error } = await supabase
+            .from('reviews')
+            .select(`
+                *,
+                customer:profiles(full_name)
+            `)
+            .eq('provider_id', providerId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        setReviews(data || []);
+    } catch (error) {
+        console.error('Error loading reviews:', error);
+    }
+};
+
+// Submit a review
+const submitReview = async () => {
+    if (!reviewData.rating || !reviewData.provider_id) {
+        alert('Please select a rating');
+        return;
+    }
+
+    try {
+        const { error } = await supabase
+            .from('reviews')
+            .insert([{
+                provider_id: reviewData.provider_id,
+                customer_id: currentUser.id,
+                booking_id: reviewData.booking_id,
+                rating: reviewData.rating,
+                comment: reviewData.comment
+            }]);
+
+        if (error) throw error;
+
+        alert('Review submitted successfully! ⭐');
+        setShowReviewModal(false);
+        setReviewData({ rating: 5, comment: '', booking_id: null, provider_id: null });
+        
+        if (selectedProvider) {
+            loadReviews(selectedProvider.id);
+        }
+    } catch (error) {
+        alert('Error submitting review: ' + error.message);
+    }
+};
+
+// Load admin statistics
+const loadAdminStats = async () => {
+    try {
+        const { data, error } = await supabase.rpc('get_admin_stats');
+        if (error) throw error;
+        setAdminStats(data);
+    } catch (error) {
+        console.error('Error loading stats:', error);
+    }
+};
+
+// Load all users
+const loadAdminUsers = async () => {
+    try {
+        const { data, error } = await supabase.from('admin_users_view').select('*');
+        if (error) throw error;
+        setAdminUsers(data || []);
+    } catch (error) {
+        console.error('Error loading users:', error);
+    }
+};
+
+// Load all bookings
+const loadAdminBookings = async () => {
+    try {
+        const { data, error } = await supabase.from('admin_bookings_view').select('*');
+        if (error) throw error;
+        setAdminBookings(data || []);
+    } catch (error) {
+        console.error('Error loading bookings:', error);
+    }
+};
+
+// Toggle user admin status
+const toggleUserAdmin = async (userId, currentStatus) => {
+    if (!confirm(`${currentStatus ? 'Remove' : 'Grant'} admin access?`)) return;
+    try {
+        const { error } = await supabase.from('profiles').update({ is_admin: !currentStatus }).eq('id', userId);
+        if (error) throw error;
+        alert('Admin status updated!');
+        loadAdminUsers();
+    } catch (error) {
+        alert('Failed to update: ' + error.message);
+    }
+};
+
+// Update booking status
+const updateBookingStatus = async (bookingId, newStatus) => {
+    try {
+        const { error } = await supabase.from('bookings').update({ status: newStatus }).eq('id', bookingId);
+        if (error) throw error;
+        alert('Booking status updated!');
+        loadAdminBookings();
+    } catch (error) {
+        alert('Failed to update: ' + error.message);
+    }
+};
 const loadProviders = async () => {
                 const { data, error } = await supabase
                     .from('providers')
@@ -1083,65 +1203,184 @@ const loadProviders = async () => {
                             </section>
                         )}
 
-                        {currentView === 'admin' && userType === 'admin' && (
-                            <section className="py-20 px-6">
-                                <div className="max-w-7xl mx-auto">
-                                    <h1 className="text-4xl font-bold mb-8">Admin Panel</h1>
-                                    <div className="bg-white rounded-lg border overflow-hidden">
-                                        <table className="w-full">
-                                            <thead className="bg-gray-50 border-b">
-                                                <tr>
-                                                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">Provider</th>
-                                                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
-                                                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">City</th>
-                                                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">Rate</th>
-                                                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">Featured</th>
-                                                    <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y">
-                                                {providers.map(provider => (
-                                                    <tr key={provider.id}>
-                                                        <td className="px-6 py-4">
-                                                            <div className="flex items-center gap-3">
-                                                                <img src={provider.image} className="w-12 h-12 rounded-lg object-cover" />
-                                                                <div>
-                                                                    <div className="font-medium">{provider.name}</div>
-                                                                    <div className="text-xs text-gray-500">{provider.phone}</div>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-6 py-4 text-sm">{provider.service}</td>
-                                                        <td className="px-6 py-4 text-sm">{provider.city}</td>
-                                                        <td className="px-6 py-4 text-sm font-medium">{provider.hourlyRate} CFA/hr</td>
-                                                        <td className="px-6 py-4">
-                                                            <button
-                                                                onClick={() => toggleFeatured(provider.id)}
-                                                                className={`text-sm px-3 py-1 rounded ${provider.featured ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                                                            >
-                                                                {provider.featured ? '⭐ Featured' : 'Feature'}
-                                                            </button>
-                                                        </td>
-                                                        <td className="px-6 py-4 text-right">
-                                                            <button
-                                                                onClick={() => deleteProvider(provider.id)}
-                                                                className="text-red-600 hover:text-red-700 text-sm font-medium"
-                                                            >
-                                                                Delete
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                        {providers.length === 0 && (
-                                            <div className="text-center py-12 text-gray-500">No providers yet</div>
-                                        )}
-                                    </div>
-                                </div>
-                            </section>
-                        )}
+                        {currentView === 'admin' && currentUser?.user_type === 'admin' && (
+    <div className="py-12 px-6">
+        <div className="max-w-7xl mx-auto">
+            <h1 className="text-4xl font-bold mb-8">Admin Dashboard</h1>
 
+            {/* Navigation Tabs */}
+            <div className="flex gap-4 mb-8 border-b">
+                <button
+                    onClick={() => { setAdminView('stats'); loadAdminStats(); }}
+                    className={`px-6 py-3 font-medium transition border-b-2 ${
+                        adminView === 'stats' 
+                            ? 'border-black text-black' 
+                            : 'border-transparent text-gray-500 hover:text-black'
+                    }`}
+                >
+                    📊 Statistics
+                </button>
+                <button
+                    onClick={() => { setAdminView('users'); loadAdminUsers(); }}
+                    className={`px-6 py-3 font-medium transition border-b-2 ${
+                        adminView === 'users' 
+                            ? 'border-black text-black' 
+                            : 'border-transparent text-gray-500 hover:text-black'
+                    }`}
+                >
+                    👥 Users
+                </button>
+                <button
+                    onClick={() => { setAdminView('bookings'); loadAdminBookings(); }}
+                    className={`px-6 py-3 font-medium transition border-b-2 ${
+                        adminView === 'bookings' 
+                            ? 'border-black text-black' 
+                            : 'border-transparent text-gray-500 hover:text-black'
+                    }`}
+                >
+                    📅 Bookings
+                </button>
+            </div>
+
+            {/* Statistics View */}
+            {adminView === 'stats' && adminStats && (
+                <div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+                        <div className="bg-white p-6 rounded-lg border-2 border-gray-200">
+                            <div className="text-3xl font-bold crunch-gradient mb-1">
+                                {adminStats.total_users}
+                            </div>
+                            <div className="text-sm text-gray-600">Total Users</div>
+                            <div className="text-xs text-green-600 mt-1">
+                                +{adminStats.new_users_today} today
+                            </div>
+                        </div>
+                        
+                        <div className="bg-white p-6 rounded-lg border-2 border-gray-200">
+                            <div className="text-3xl font-bold crunch-gradient mb-1">
+                                {adminStats.total_providers}
+                            </div>
+                            <div className="text-sm text-gray-600">Providers</div>
+                        </div>
+                        
+                        <div className="bg-white p-6 rounded-lg border-2 border-gray-200">
+                            <div className="text-3xl font-bold crunch-gradient mb-1">
+                                {adminStats.total_bookings}
+                            </div>
+                            <div className="text-sm text-gray-600">Total Bookings</div>
+                            <div className="text-xs text-green-600 mt-1">
+                                +{adminStats.new_bookings_today} today
+                            </div>
+                        </div>
+                        
+                        <div className="bg-white p-6 rounded-lg border-2 border-gray-200">
+                            <div className="text-3xl font-bold crunch-gradient mb-1">
+                                {adminStats.total_revenue?.toLocaleString() || 0} CFA
+                            </div>
+                            <div className="text-sm text-gray-600">Revenue</div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Users View */}
+            {adminView === 'users' && (
+                <div className="bg-white rounded-lg border overflow-x-auto">
+                    <table className="w-full">
+                        <thead className="bg-gray-50 border-b">
+                            <tr>
+                                <th className="px-4 py-3 text-left text-sm font-semibold">User</th>
+                                <th className="px-4 py-3 text-left text-sm font-semibold">Type</th>
+                                <th className="px-4 py-3 text-left text-sm font-semibold">Joined</th>
+                                <th className="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                            {adminUsers.map(user => (
+                                <tr key={user.id} className="hover:bg-gray-50">
+                                    <td className="px-4 py-3">
+                                        <div className="font-medium">{user.full_name}</div>
+                                        <div className="text-sm text-gray-500">{user.email}</div>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <div className="flex flex-col gap-1">
+                                            {user.is_customer && (
+                                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded w-fit">Customer</span>
+                                            )}
+                                            {user.is_provider && (
+                                                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded w-fit">Provider</span>
+                                            )}
+                                            {user.is_admin && (
+                                                <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded w-fit">Admin</span>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-gray-500">
+                                        {new Date(user.created_at).toLocaleDateString()}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <button
+                                            onClick={() => toggleUserAdmin(user.id, user.is_admin)}
+                                            className="text-xs px-3 py-1 border rounded hover:bg-gray-50"
+                                        >
+                                            {user.is_admin ? 'Remove Admin' : 'Make Admin'}
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {/* Bookings View */}
+            {adminView === 'bookings' && (
+                <div className="bg-white rounded-lg border overflow-x-auto">
+                    <table className="w-full">
+                        <thead className="bg-gray-50 border-b">
+                            <tr>
+                                <th className="px-4 py-3 text-left text-sm font-semibold">Customer</th>
+                                <th className="px-4 py-3 text-left text-sm font-semibold">Service</th>
+                                <th className="px-4 py-3 text-left text-sm font-semibold">Amount</th>
+                                <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
+                                <th className="px-4 py-3 text-left text-sm font-semibold">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                            {adminBookings.map(booking => (
+                                <tr key={booking.id} className="hover:bg-gray-50">
+                                    <td className="px-4 py-3">
+                                        <div className="text-sm">{booking.customer_name}</div>
+                                        <div className="text-xs text-gray-500">{booking.customer_phone}</div>
+                                    </td>
+                                    <td className="px-4 py-3 text-sm">{booking.service}</td>
+                                    <td className="px-4 py-3 font-semibold">
+                                        {booking.total_amount?.toLocaleString() || 0} CFA
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <select
+                                            value={booking.status}
+                                            onChange={(e) => updateBookingStatus(booking.id, e.target.value)}
+                                            className="text-xs px-2 py-1 border rounded"
+                                        >
+                                            <option value="pending">Pending</option>
+                                            <option value="confirmed">Confirmed</option>
+                                            <option value="completed">Completed</option>
+                                            <option value="cancelled">Cancelled</option>
+                                        </select>
+                                    </td>
+                                    <td className="px-4 py-3 text-xs text-gray-500">
+                                        {new Date(booking.created_at).toLocaleDateString()}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
+    </div>
+)}
                         {currentView === 'contact' && (
                             <section className="py-20 px-6">
                                 <div className="max-w-4xl mx-auto">
@@ -1920,7 +2159,62 @@ const loadProviders = async () => {
                         </div>
                     </footer>
 
-                    {/* Floating Add Service Button - Top Left with CRUNCH Gradient */}
+{/* Review Modal */}
+                    {showReviewModal && (
+                        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-lg p-6 max-w-md w-full">
+                                <h2 className="text-2xl font-bold mb-4">Leave a Review</h2>
+                                
+                                {/* Star Rating */}
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium mb-2">Rating</label>
+                                    <div className="flex gap-2">
+                                        {[1, 2, 3, 4, 5].map(star => (
+                                            <button
+                                                key={star}
+                                                onClick={() => setReviewData({...reviewData, rating: star})}
+                                                className="text-3xl transition-transform hover:scale-110"
+                                            >
+                                                {star <= reviewData.rating ? '⭐' : '☆'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        {reviewData.rating} star{reviewData.rating !== 1 ? 's' : ''}
+                                    </p>
+                                </div>
+
+                                {/* Comment */}
+                                <div className="mb-6">
+                                    <label className="block text-sm font-medium mb-2">Comment (Optional)</label>
+                                    <textarea
+                                        rows="4"
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-black resize-none"
+                                        placeholder="Share your experience..."
+                                        value={reviewData.comment}
+                                        onChange={(e) => setReviewData({...reviewData, comment: e.target.value})}
+                                    ></textarea>
+                                </div>
+
+                                {/* Buttons */}
+                                <div className="flex gap-3">
+                                    <button 
+                                        onClick={() => setShowReviewModal(false)}
+                                        className="flex-1 py-2.5 border border-gray-200 rounded-md hover:bg-gray-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button 
+                                        onClick={submitReview}
+                                        className="flex-1 py-2.5 bg-black text-white rounded-md hover:bg-gray-800"
+                                    >
+                                        Submit Review
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}                    
+{/* Floating Add Service Button - Top Left with CRUNCH Gradient */}
                     {isLoggedIn && (
                         <button
                             onClick={() => setShowProfileModal(true)}
