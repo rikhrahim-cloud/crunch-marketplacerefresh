@@ -293,6 +293,8 @@ const [adminView, setAdminView] = useState('stats');
                 booking_id: null,
                 provider_id: null
             });
+            const [uploadingImage, setUploadingImage] = useState(false);
+            const [imagePreview, setImagePreview] = useState(null);
             const [showBookingModal, setShowBookingModal] = useState(false);
             const [showPaymentModal, setShowPaymentModal] = useState(false);
             const [loginType, setLoginType] = useState('user');
@@ -332,6 +334,24 @@ const [adminView, setAdminView] = useState('stats');
                 loadProviders();
                 loadStats();
             }, []);
+
+            // Load provider's current image when profile modal opens
+            useEffect(() => {
+                if (showProfileModal && isProvider && currentUser) {
+                    const loadProviderImage = async () => {
+                        const { data } = await supabase
+                            .from('providers')
+                            .select('image')
+                            .eq('id', currentUser.id)
+                            .single();
+                        
+                        if (data?.image) {
+                            setImagePreview(data.image);
+                        }
+                    };
+                    loadProviderImage();
+                }
+            }, [showProfileModal, isProvider, currentUser]);
 
             // Check if user is logged in
             const checkUser = async () => {
@@ -508,6 +528,74 @@ const submitReview = async () => {
     } catch (error) {
         console.error('Review error:', error);
         alert('Error submitting review: ' + error.message);
+    }
+};
+
+// Image Upload Functions
+const handleImageUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file
+    if (file.size > 5 * 1024 * 1024) {
+        alert('⚠️ Image must be less than 5MB');
+        return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+        alert('⚠️ Please select an image file');
+        return;
+    }
+
+    setUploadingImage(true);
+
+    try {
+        // Create unique filename
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${currentUser.id}-${Date.now()}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        // Upload to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('profile-pictures')
+            .upload(filePath, file, {
+                cacheControl: '3600',
+                upsert: true
+            });
+
+        if (uploadError) throw uploadError;
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+            .from('profile-pictures')
+            .getPublicUrl(filePath);
+
+        const imageUrl = urlData.publicUrl;
+
+        // Update provider profile with new image
+        const { error: updateError } = await supabase
+            .from('providers')
+            .update({ image: imageUrl })
+            .eq('id', currentUser.id);
+
+        if (updateError) throw updateError;
+
+        // Update profiles table avatar_url
+        await supabase
+            .from('profiles')
+            .update({ avatar_url: imageUrl })
+            .eq('id', currentUser.id);
+
+        alert('✅ Profile picture updated successfully!');
+        setImagePreview(imageUrl);
+        loadProviders(); // Refresh to show new image
+
+    } catch (error) {
+        console.error('Upload error:', error);
+        alert('❌ Failed to upload image: ' + error.message);
+    } finally {
+        setUploadingImage(false);
+        event.target.value = ''; // Reset input
     }
 };
 
@@ -1968,6 +2056,62 @@ const loadProviders = async () => {
                         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-6 overflow-y-auto">
                             <div className="bg-white rounded-lg p-8 max-w-2xl w-full my-8">
                                 <h2 className="text-2xl font-bold mb-6">Create Your Profile</h2>
+                                
+                                {/* Profile Picture Upload */}
+                                <div className="mb-6">
+                                    <label className="block text-sm font-medium mb-3">Profile Picture</label>
+                                    <div className="flex items-center gap-4">
+                                        <div className="relative">
+                                            <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-100 border-2 border-gray-200">
+                                                {imagePreview || profileData.image ? (
+                                                    <img 
+                                                        src={imagePreview || profileData.image} 
+                                                        alt="Preview"
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                                        <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                        </svg>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="flex-1">
+                                            <input
+                                                type="file"
+                                                id="profile-pic-upload"
+                                                accept="image/*"
+                                                onChange={handleImageUpload}
+                                                disabled={uploadingImage}
+                                                className="hidden"
+                                            />
+                                            <label
+                                                htmlFor="profile-pic-upload"
+                                                className={`inline-block px-6 py-3 border-2 border-black rounded-lg font-medium cursor-pointer transition min-h-[56px] flex items-center justify-center ${
+                                                    uploadingImage 
+                                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                                                        : 'hover:bg-black hover:text-white'
+                                                }`}
+                                            >
+                                                {uploadingImage ? (
+                                                    <>
+                                                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24">
+                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                        </svg>
+                                                        Uploading...
+                                                    </>
+                                                ) : (
+                                                    <>📸 Upload Photo</>
+                                                )}
+                                            </label>
+                                            <p className="text-xs text-gray-500 mt-2">JPG, PNG or GIF (max 5MB)</p>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div className="space-y-4">
                                     <div>
                                         <label className="block text-sm font-medium mb-2">Name*</label>
