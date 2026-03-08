@@ -4,6 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CRUNCH - The Network For Side Hustles</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Find skilled local professionals for every service you need. Instant booking, verified providers, rated & reviewed.">
+    <meta name="theme-color" content="#FF6B35">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CRUNCH">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- PWA Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512x512.png">
+    <link rel="apple-touch-icon" href="/icon-192x192.png">
+    
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="CRUNCH - The Network For Side Hustles">
+    <meta property="og:description" content="Find skilled local professionals in Cameroon. 500+ verified providers, instant booking.">
+    <meta property="og:image" content="/icon-512x512.png">
+    <meta property="og:url" content="https://crunch-marketplace.vercel.app">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="CRUNCH - The Network For Side Hustles">
+    <meta name="twitter:description" content="Find skilled local professionals in Cameroon. 500+ verified providers, instant booking.">
+    <meta name="twitter:image" content="/icon-512x512.png">
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -2624,6 +2651,130 @@ const loadProviders = async () => {
         }
 
         ReactDOM.render(<CrunchApp />, document.getElementById('root'));
+    </script>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+        // Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('✅ Service Worker registered successfully:', registration.scope);
+                        
+                        // Check for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New update available
+                                    if (confirm('New version available! Reload to update?')) {
+                                        newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch((error) => {
+                        console.log('❌ Service Worker registration failed:', error);
+                    });
+            });
+        }
+
+        // PWA Install Prompt
+        let deferredPrompt;
+        const installButton = document.createElement('div');
+        installButton.id = 'pwa-install-prompt';
+        installButton.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #FF8A65 0%, #FF6B9D 50%, #E91E8C 100%);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            cursor: pointer;
+            z-index: 9999;
+            display: none;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            animation: slideIn 0.3s ease-out;
+        `;
+        
+        installButton.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                </svg>
+                <div>
+                    <div style="font-size: 14px; font-weight: 700;">Install CRUNCH App</div>
+                    <div style="font-size: 11px; opacity: 0.9;">Quick access from home screen</div>
+                </div>
+                <button id="pwa-close" style="margin-left: 8px; background: rgba(255,255,255,0.2); border: none; color: white; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;">×</button>
+            </div>
+        `;
+
+        document.body.appendChild(installButton);
+
+        // Listen for beforeinstallprompt event
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show install prompt after 3 seconds
+            setTimeout(() => {
+                installButton.style.display = 'block';
+            }, 3000);
+        });
+
+        // Install button click
+        installButton.addEventListener('click', async (e) => {
+            if (e.target.id === 'pwa-close') {
+                installButton.style.display = 'none';
+                return;
+            }
+            
+            if (!deferredPrompt) {
+                return;
+            }
+
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            
+            if (outcome === 'accepted') {
+                console.log('✅ User accepted PWA install');
+            } else {
+                console.log('❌ User dismissed PWA install');
+            }
+            
+            deferredPrompt = null;
+            installButton.style.display = 'none';
+        });
+
+        // Hide prompt after app is installed
+        window.addEventListener('appinstalled', () => {
+            console.log('✅ PWA installed successfully!');
+            installButton.style.display = 'none';
+            deferredPrompt = null;
+        });
+
+        // Add slide-in animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(400px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>
